@@ -1,53 +1,43 @@
-import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import { Heading, Contacts } from './App.styled';
+import { useDispatch, useSelector } from 'react-redux';
+import { addContact, deleteContact } from '../redux/contactsSlice';
+import { setFilter } from '../redux/filterSlice';
 import Form from './Form/Form';
 import ContactList from './ContactList/ContactList';
 import Filter from './Filter/Filter';
-import initialContacts from './contacts/contacts.json';
 
-const useLocalStorage = (key, defaultValue) => {
-  const [state, setState] = useState(() => {
-    return JSON.parse(window.localStorage.getItem(key)) ?? defaultValue;
-  });
+export default function App() {
+  const dispatch = useDispatch();
 
-  return [state, setState];
-};
+  const contacts = useSelector(state => state.contacts);
 
-const App = () => {
-  const [contacts, setContacts] = useLocalStorage('contacts', initialContacts);
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => {
-    localStorage.setItem('contacts', JSON.stringify(contacts));
-  }, [contacts]);
-
-  const deleteContact = contactId => {
-    setContacts(state => state.filter(contact => contact.id !== contactId));
-  };
-
-  const dublicateContact = data => {
-    contacts.find(item => item.name === data.name);
-  };
-
-  const dublicateNumber = data => {
-    return contacts.find(item => item.number === data.number);
-  };
+  const filter = useSelector(state => state.filter);
 
   const formSubmitHandler = data => {
-    if (dublicateContact(data) || dublicateNumber(data)) {
-      return alert(`${data.name} is already in contacts`);
-    }
     const contact = {
       id: nanoid(),
       ...data,
     };
 
-    setContacts([contact, ...contacts]);
+    const dublicateContact = contacts.find(item => item.name === contact.name);
+    const dublicateNumber = contacts.find(
+      item => item.number === contact.number
+    );
+
+    if (dublicateContact || dublicateNumber) {
+      return alert(`${data.name} is already in contacts`);
+    }
+    dispatch(addContact(contact));
+  };
+
+  const onDeleteContact = id => {
+    dispatch(deleteContact(id));
   };
 
   const changeFilter = e => {
-    setFilter(e.currentTarget.value);
+    const filterValue = e.target.value;
+    dispatch(setFilter(filterValue));
   };
 
   const visibleContacts = contacts.filter(contact =>
@@ -60,9 +50,10 @@ const App = () => {
       <Form onSubmit={formSubmitHandler} />
       <Contacts>Contacts</Contacts>
       <Filter filter={filter} onChangeFilter={changeFilter} />
-      <ContactList contacts={visibleContacts} onDeleteContact={deleteContact} />
+      <ContactList
+        contacts={visibleContacts}
+        onDeleteContact={onDeleteContact}
+      />
     </div>
   );
-};
-
-export default App;
+}
